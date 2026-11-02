@@ -1,0 +1,54 @@
+# Managed by the NightBeam maintainer agent. Builds every Gradle project in
+# the repository (each Minecraft version folder, or the root project) on
+# pushes and pull requests. Publishing stays in publish.yml.
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.find.outputs.projects }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: find
+        shell: bash
+        run: |
+          projects='[]'
+          while read -r dir; do
+            java=$(grep -hoE '^java_version[[:space:]]*=[[:space:]]*[0-9]+' "$dir/gradle.properties" 2>/dev/null | grep -oE '[0-9]+$' | head -1)
+            if [ -z "$java" ]; then
+              java=$(grep -hoE 'JavaLanguageVersion\.of\([[:space:]]*[0-9]+' "$dir"/build.gradle* 2>/dev/null | grep -oE '[0-9]+$' | sort -n | tail -1)
+            fi
+            projects=$(jq -c --arg d "$dir" --arg j "${java:-21}" '. + [{dir: $d, java: $j}]' <<<"$projects")
+          done < <(find . -maxdepth 2 -name gradlew -printf '%h\n' | sed 's|^\./||' | sort)
+          echo "projects=$projects" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: discover
+    if: needs.discover.outputs.projects != '[]'
+    name: build (${{ matrix.project.dir }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJson(needs.discover.outputs.projects) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.project.java }}
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Build
+        working-directory: ${{ matrix.project.dir }}
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon --stacktrace
