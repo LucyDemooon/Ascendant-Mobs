@@ -2,6 +2,7 @@ package com.nightbeam.remnants.mobs.api;
 
 import com.nightbeam.remnants.mobs.content.Rank;
 import com.nightbeam.remnants.mobs.content.Trait;
+import com.nightbeam.remnants.mobs.event.EventNights;
 import com.nightbeam.remnants.mobs.event.HuntersMoon;
 import com.nightbeam.remnants.mobs.mob.MobData;
 import com.nightbeam.remnants.mobs.mob.MobLeveler;
@@ -69,6 +70,25 @@ public final class RemnantMobsApi {
     /** True while a Hunter's Moon is up. Server only. */
     public static boolean isHuntersMoon() {
         return HuntersMoon.active();
+    }
+
+    /**
+     * Where the threat at {@code pos} sits in its dimension's level band: 0 at the bottom, 1 at the top. This is the
+     * difficulty that rank odds and the difficulty meter follow. Server only.
+     */
+    public static double getDifficulty(ServerLevel level, BlockPos pos) {
+        return Threat.at(level, pos, true).fraction();
+    }
+
+    /** The id of the running event night (events.json), or "" when none is running. Server only. */
+    public static String getActiveEvent() {
+        String id = EventNights.active();
+        return id == null ? "" : id;
+    }
+
+    /** Adds a boss tier that events can name in {@code mini_boss.tier}. Call during mod setup. */
+    public static void registerBossTier(String id, BossTier tier) {
+        EventNights.registerTier(id, tier);
     }
 
     private static MobData data(Entity entity) {

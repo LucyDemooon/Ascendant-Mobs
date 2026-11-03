@@ -41,6 +41,7 @@ public final class LensHud {
         if (player == null || minecraft.options.hideGui) {
             return;
         }
+        DifficultyHud.render(graphics, minecraft.font);
         Font font = minecraft.font;
         PlayerStatePayload state = ClientState.player();
         if (state.moon() && RemnantsConfig.client().moonIndicator && !player.level().dimensionType().hasFixedTime()) {

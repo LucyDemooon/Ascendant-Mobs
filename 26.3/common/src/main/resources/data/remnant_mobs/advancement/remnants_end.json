@@ -4,10 +4,12 @@
       "id": "minecraft:netherite_sword"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.remnants_end.title"
+      "translate": "advancements.remnant_mobs.remnants_end.title",
+      "fallback": "A Remnant's End"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.remnants_end.description"
+      "translate": "advancements.remnant_mobs.remnants_end.description",
+      "fallback": "Slay a Remnant, the rarest and deadliest of monsters"
     },
     "frame": "challenge",
     "show_toast": true,

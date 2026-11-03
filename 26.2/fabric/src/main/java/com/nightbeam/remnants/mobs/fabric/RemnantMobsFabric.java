@@ -3,6 +3,7 @@ package com.nightbeam.remnants.mobs.fabric;
 import com.nightbeam.remnants.mobs.RemnantMobs;
 import com.nightbeam.remnants.mobs.RemnantsEvents;
 import com.nightbeam.remnants.mobs.content.ModContent;
+import com.nightbeam.remnants.mobs.network.DifficultyPayload;
 import com.nightbeam.remnants.mobs.network.MobInfoPayload;
 import com.nightbeam.remnants.mobs.network.PlayerStatePayload;
 import com.nightbeam.remnants.mobs.platform.Platform;
@@ -16,6 +17,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -40,9 +42,18 @@ public final class RemnantMobsFabric implements ModInitializer {
 
         PayloadTypeRegistry.clientboundPlay().register(MobInfoPayload.TYPE, MobInfoPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(PlayerStatePayload.TYPE, PlayerStatePayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(DifficultyPayload.TYPE, DifficultyPayload.CODEC);
 
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS)
-                .register(output -> output.insertAfter(Items.ECHO_SHARD, ModContent.REMNANT_SHARD.get()));
+                .register(output -> {
+                    output.insertAfter(Items.ECHO_SHARD, ModContent.REMNANT_SHARD.get());
+                    output.insertAfter(ModContent.REMNANT_SHARD.get(), ModContent.VITAL_EMBER.get());
+                });
+        CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FOOD_AND_DRINKS)
+                .register(output -> {
+                    output.accept(ModContent.MENDING_SALVE.get());
+                    output.accept(ModContent.HUNTERS_DRAUGHT.get());
+                });
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES)
                 .register(output -> output.insertAfter(Items.SPYGLASS, ModContent.HUNTERS_LENS.get()));
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT)
@@ -53,6 +64,7 @@ public final class RemnantMobsFabric implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPING.register(RemnantsEvents::onServerStopping);
         ServerTickEvents.END_SERVER_TICK.register(RemnantsEvents::onServerTick);
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> RemnantsEvents.onPlayerJoin(handler.getPlayer()));
+        ServerPlayerEvents.COPY_FROM.register(RemnantsEvents::onPlayerClone);
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> RemnantsEvents.onPlayerLeave(handler.getPlayer()));
         CommandRegistrationCallback.EVENT.register((dispatcher, context, environment) -> RemnantsEvents.registerCommands(dispatcher, context));
     }

@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "remnant_mobs:vital_ember"
+    },
+    "title": {
+      "translate": "advancements.remnant_mobs.kindled.title",
+      "fallback": "Kindled"
+    },
+    "description": {
+      "translate": "advancements.remnant_mobs.kindled.description",
+      "fallback": "Grow your heart with a Vital Ember"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "remnant_mobs:root"
+}

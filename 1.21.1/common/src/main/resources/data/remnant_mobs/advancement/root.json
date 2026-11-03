@@ -4,10 +4,12 @@
       "id": "remnant_mobs:remnant_shard"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.root.title"
+      "translate": "advancements.remnant_mobs.root.title",
+      "fallback": "Remnants"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.root.description"
+      "translate": "advancements.remnant_mobs.root.description",
+      "fallback": "Not every monster is the same. Some have levels, ranks and traits"
     },
     "frame": "task",
     "show_toast": false,

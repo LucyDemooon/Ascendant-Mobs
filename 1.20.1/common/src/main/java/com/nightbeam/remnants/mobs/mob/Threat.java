@@ -1,8 +1,11 @@
 package com.nightbeam.remnants.mobs.mob;
 
 import com.nightbeam.remnants.mobs.compat.RasBridge;
+import com.nightbeam.remnants.mobs.config.DifficultyConfig;
 import com.nightbeam.remnants.mobs.config.LevelsConfig;
 import com.nightbeam.remnants.mobs.config.RemnantsConfig;
+import com.nightbeam.remnants.mobs.difficulty.Difficulty;
+import com.nightbeam.remnants.mobs.event.EventNights;
 import com.nightbeam.remnants.mobs.event.HuntersMoon;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -20,13 +23,24 @@ import javax.annotation.Nullable;
 
 /**
  * The threat of a place: the level mobs spawning there get, before their personal spread. Each part is kept so
- * {@code /remnants threat} and the Hunter's Lens can explain it.
+ * {@code /remnants threat}, {@code /remnants difficulty} and the Hunter's Lens can explain it.
+ *
+ * <p>With the difficulty engine off (difficulty.json) this is the 3.0 formula. With it on, distance, days and depth
+ * follow the engine's curves, play time and gear join them, and the dimension's multiplier and offset apply.
  */
 public record Threat(int min, int max, double distance, double days, double depth, int moon, int structure,
-                     @Nullable String structureId, int players, double playerLevel, double weight, double raw, int level) {
+                     @Nullable String structureId, int players, double playerLevel, double weight, double raw, int level,
+                     boolean engine, double played, double gear, int event, double multiplier, double offset) {
 
     public static Threat at(ServerLevel level, BlockPos pos, boolean withPlayers) {
+        return at(level, pos, withPlayers, true);
+    }
+
+    /** @param engineAllowed false for mobs tagged {@code #remnant_mobs:ignores_difficulty} */
+    public static Threat at(ServerLevel level, BlockPos pos, boolean withPlayers, boolean engineAllowed) {
         LevelsConfig c = RemnantsConfig.levels();
+        DifficultyConfig dc = RemnantsConfig.difficulty();
+        boolean engine = engineAllowed && Difficulty.active(level);
         String dimension = level.dimension().location().toString();
         LevelsConfig.Band band = c.band(dimension);
 
@@ -39,12 +53,51 @@ public record Threat(int min, int max, double distance, double days, double dept
             dx = pos.getX();
             dz = pos.getZ();
         }
-        double distance = Math.sqrt(dx * dx + dz * dz) / c.blocksPerLevel * band.distanceScale();
-        double days = Math.min(WorldTime.day(level) / c.daysPerLevel, c.maxDayLevels);
-        double depth = level.dimensionType().hasSkyLight() && pos.getY() < c.depthStartY
-                ? Math.min((c.depthStartY - pos.getY()) / c.blocksPerDepthLevel, c.maxDepthLevels) : 0;
+        double blocks = Math.sqrt(dx * dx + dz * dz);
+        double day = WorldTime.day(level);
+        double distance;
+        double days;
+        double depth;
+        if (engine) {
+            distance = dc.factor(dimension, "distance").levels(blocks * band.distanceScale());
+            days = dc.factor(dimension, "days").levels(day);
+            depth = level.dimensionType().hasSkyLight() ? dc.factor(dimension, "depth").levels(dc.depthStartY - pos.getY()) : 0;
+        } else {
+            distance = blocks / c.blocksPerLevel * band.distanceScale();
+            days = Math.min(day / c.daysPerLevel, c.maxDayLevels);
+            depth = level.dimensionType().hasSkyLight() && pos.getY() < c.depthStartY
+                    ? Math.min((c.depthStartY - pos.getY()) / c.blocksPerDepthLevel, c.maxDepthLevels) : 0;
+        }
         int moon = HuntersMoon.affects(level) ? c.moonLevelBonus : 0;
-        double raw = band.min() + distance + days + depth + moon;
+        int event = EventNights.levelBonus(level);
+
+        List<ServerPlayer> near = new ArrayList<>();
+        if (withPlayers) {
+            double radiusSq = c.playerRadius * c.playerRadius;
+            for (ServerPlayer player : level.players()) {
+                if (!player.isSpectator() && player.isAlive()
+                        && player.distanceToSqr(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5) <= radiusSq) {
+                    near.add(player);
+                }
+            }
+            near.sort(Comparator.comparingDouble(p -> p.distanceToSqr(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5)));
+        }
+
+        double played = 0;
+        double gear = 0;
+        double multiplier = 1.0;
+        double offset = 0;
+        double raw;
+        if (engine) {
+            played = dc.factor(dimension, "played").levels(aggregate(c.playerMode, near, Difficulty::playedHours));
+            gear = dc.factor(dimension, "gear").levels(aggregate(c.playerMode, near, Difficulty::gearScore));
+            DifficultyConfig.Dimension d = dc.dimension(dimension);
+            multiplier = d.multiplier();
+            offset = d.offset();
+            raw = (band.min() + distance + days + depth + played + gear) * multiplier + offset + moon + event;
+        } else {
+            raw = band.min() + distance + days + depth + moon + event;
+        }
 
         int structure = 0;
         String structureId = null;
@@ -69,31 +122,16 @@ public record Threat(int min, int max, double distance, double days, double dept
         double weight = 0;
         if (withPlayers && !"none".equals(c.playerSource) && c.playerWeight > 0) {
             List<Integer> levels = new ArrayList<>();
-            double best = Double.MAX_VALUE;
-            int nearest = 0;
-            double radiusSq = c.playerRadius * c.playerRadius;
-            for (ServerPlayer player : level.players()) {
-                if (player.isSpectator() || !player.isAlive()) {
-                    continue;
-                }
-                double distSq = player.distanceToSqr(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-                if (distSq > radiusSq) {
-                    continue;
-                }
+            for (ServerPlayer player : near) {
                 int value = hunterLevel(player);
-                if (value < 0) {
-                    continue;
-                }
-                levels.add(value);
-                if (distSq < best) {
-                    best = distSq;
-                    nearest = value;
+                if (value >= 0) {
+                    levels.add(value);
                 }
             }
             if (!levels.isEmpty()) {
                 players = levels.size();
                 playerLevel = switch (c.playerMode) {
-                    case "nearest" -> nearest;
+                    case "nearest" -> levels.get(0);
                     case "highest" -> levels.stream().mapToInt(Integer::intValue).max().orElse(0);
                     default -> levels.stream().mapToInt(Integer::intValue).average().orElse(0);
                 };
@@ -102,7 +140,24 @@ public record Threat(int min, int max, double distance, double days, double dept
             }
         }
         int result = Mth.clamp((int) Math.floor(raw), band.min(), band.max());
-        return new Threat(band.min(), band.max(), distance, days, depth, moon, structure, structureId, players, playerLevel, weight, raw, result);
+        return new Threat(band.min(), band.max(), distance, days, depth, moon, structure, structureId, players, playerLevel, weight,
+                raw, result, engine, played, gear, event, multiplier, offset);
+    }
+
+    /** Where this threat sits in its band, 0 to 1: what rank odds, the meter and loot scale with. */
+    public double fraction() {
+        return Difficulty.fraction(level, min, max);
+    }
+
+    private static double aggregate(String mode, List<ServerPlayer> players, java.util.function.ToDoubleFunction<ServerPlayer> value) {
+        if (players.isEmpty()) {
+            return 0;
+        }
+        return switch (mode) {
+            case "nearest" -> value.applyAsDouble(players.get(0));
+            case "highest" -> players.stream().mapToDouble(value).max().orElse(0);
+            default -> players.stream().mapToDouble(value).average().orElse(0);
+        };
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.nightbeam.remnants.mobs.forge;
 
 import com.nightbeam.remnants.mobs.client.ClientState;
+import com.nightbeam.remnants.mobs.network.DifficultyPayload;
 import com.nightbeam.remnants.mobs.network.MobInfoPayload;
 import com.nightbeam.remnants.mobs.network.PlayerStatePayload;
 
@@ -15,5 +16,9 @@ final class ClientHandlers {
 
     static void playerState(PlayerStatePayload payload) {
         ClientState.handlePlayerState(payload);
+    }
+
+    static void difficulty(DifficultyPayload payload) {
+        ClientState.handleDifficulty(payload);
     }
 }

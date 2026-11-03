@@ -4,10 +4,12 @@
       "item": "remnant_mobs:brand_of_challenge"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.accept_the_challenge.title"
+      "translate": "advancements.remnant_mobs.accept_the_challenge.title",
+      "fallback": "Accept the Challenge"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.accept_the_challenge.description"
+      "translate": "advancements.remnant_mobs.accept_the_challenge.description",
+      "fallback": "Mark a monster with a Brand of Challenge"
     },
     "frame": "goal",
     "show_toast": true,

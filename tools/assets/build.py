@@ -162,7 +162,8 @@ def build(version: str):
         path = tex / 'item' / f'{name}.png'
         save(strip(frames), path)
         write_json(path.with_suffix('.png.mcmeta'), {'animation': {'frametime': items.ANIMATED[name][2], 'interpolate': True}})
-    save(items.lens(), tex / 'item' / 'hunters_lens.png')
+    for name, make in items.STATIC.items():
+        save(make(), tex / 'item' / f'{name}.png')
     sheet, _ = icons.sheet()
     save(sheet, tex / 'font' / 'icons.png')
     write_json(assets / 'font' / 'icons.json', data.font_json(), ascii_only=True)

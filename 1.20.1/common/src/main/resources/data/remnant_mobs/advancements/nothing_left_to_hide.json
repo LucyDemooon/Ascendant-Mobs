@@ -4,10 +4,12 @@
       "item": "minecraft:ender_eye"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.nothing_left_to_hide.title"
+      "translate": "advancements.remnant_mobs.nothing_left_to_hide.title",
+      "fallback": "Nothing Left to Hide"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.nothing_left_to_hide.description"
+      "translate": "advancements.remnant_mobs.nothing_left_to_hide.description",
+      "fallback": "Slay a monster with four traits"
     },
     "frame": "challenge",
     "show_toast": true,

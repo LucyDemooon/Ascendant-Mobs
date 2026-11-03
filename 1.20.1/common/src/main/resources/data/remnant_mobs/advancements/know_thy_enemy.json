@@ -4,10 +4,12 @@
       "item": "remnant_mobs:hunters_lens"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.know_thy_enemy.title"
+      "translate": "advancements.remnant_mobs.know_thy_enemy.title",
+      "fallback": "Know Thy Enemy"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.know_thy_enemy.description"
+      "translate": "advancements.remnant_mobs.know_thy_enemy.description",
+      "fallback": "Look through a Hunter's Lens"
     },
     "frame": "task",
     "show_toast": true,

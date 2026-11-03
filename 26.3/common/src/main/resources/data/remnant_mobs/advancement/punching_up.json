@@ -4,10 +4,12 @@
       "id": "minecraft:crossbow"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.punching_up.title"
+      "translate": "advancements.remnant_mobs.punching_up.title",
+      "fallback": "Punching Up"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.punching_up.description"
+      "translate": "advancements.remnant_mobs.punching_up.description",
+      "fallback": "Slay a ranked monster ten or more levels above your own"
     },
     "frame": "goal",
     "show_toast": true,

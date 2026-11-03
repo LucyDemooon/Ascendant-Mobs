@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
@@ -55,10 +56,13 @@ public final class Plates {
         pose.mulPose(camera.orientation);
         float scale = 0.025F * plate.scale;
         pose.scale(scale, -scale, scale);
+        // How far in front of its outline text goes, in plate pixels: about eight steps of the depth buffer, which
+        // grow with the square of the distance (4 cm at 64 blocks). See outlined().
+        float ahead = (float) (state.distanceToCameraSq * 4.0E-4 / plate.scale);
 
         int titleWidth = font.width(plate.title);
-        collector.submitText(pose, -titleWidth / 2.0F, -13, plate.title.getVisualOrderText(), false, Font.DisplayMode.NORMAL, light,
-                ARGB.color(alpha, 0xFFFFFF), 0, ARGB.color(Math.round(alpha * 0.85F), 0x000000));
+        outlined(collector, pose, -titleWidth / 2.0F, -13, plate.title.getVisualOrderText(), light, ARGB.color(alpha, 0xFFFFFF),
+                ARGB.color(Math.round(alpha * 0.85F), 0x000000), ahead);
 
         float half = Plate.BAR_WIDTH / 2.0F;
         float x0 = -half;
@@ -97,8 +101,8 @@ public final class Plates {
             pose.pushPose();
             pose.translate(x1 + 3, y0 - 0.5F, 0);
             pose.scale(0.62F, 0.62F, 0.62F);
-            collector.submitText(pose, 0, 0, Component.literal(plate.healthText).getVisualOrderText(), false, Font.DisplayMode.NORMAL, light,
-                    ARGB.color(alpha, 0xE6E1D3), 0, ARGB.color(Math.round(alpha * 0.8F), 0x000000));
+            outlined(collector, pose, 0, 0, Component.literal(plate.healthText).getVisualOrderText(), light, ARGB.color(alpha, 0xE6E1D3),
+                    ARGB.color(Math.round(alpha * 0.8F), 0x000000), ahead / 0.62F);
             pose.popPose();
         }
 
@@ -119,10 +123,24 @@ public final class Plates {
             pose.translate(0, y1 + 3, 0);
             pose.scale(0.75F, 0.75F, 0.75F);
             int width = font.width(line);
-            collector.submitText(pose, -width / 2.0F, 0, line.getVisualOrderText(), false, Font.DisplayMode.NORMAL, light,
-                    ARGB.color(alpha, 0xFFFFFF), 0, ARGB.color(Math.round(alpha * 0.8F), 0x000000));
+            outlined(collector, pose, -width / 2.0F, 0, line.getVisualOrderText(), light, ARGB.color(alpha, 0xFFFFFF),
+                    ARGB.color(Math.round(alpha * 0.8F), 0x000000), ahead / 0.75F);
             pose.popPose();
         }
+        pose.popPose();
+    }
+
+    /**
+     * Text with an outline. 26.1.2 draws the outline at the depth of the text, so seen at an angle the outline can win
+     * over the text itself, worst of all over bold glyphs, whose second stroke sits a little in front. So the outline
+     * is drawn on its own first (fully transparent text is discarded), then the text, {@code ahead} in front of it.
+     */
+    private static void outlined(SubmitNodeCollector collector, PoseStack pose, float x, float y, FormattedCharSequence text, int light,
+            int color, int outline, float ahead) {
+        collector.submitText(pose, x, y, text, false, Font.DisplayMode.NORMAL, light, ARGB.color(0, color), 0, outline);
+        pose.pushPose();
+        pose.translate(0, 0, ahead);
+        collector.submitText(pose, x, y, text, false, Font.DisplayMode.POLYGON_OFFSET, light, color, 0, 0);
         pose.popPose();
     }
 

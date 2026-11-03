@@ -19,6 +19,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public final class Network {
     private static final Map<UUID, PlayerStatePayload> LAST_STATE = new HashMap<>();
+    private static final Map<UUID, DifficultyPayload> LAST_DIFFICULTY = new HashMap<>();
 
     private Network() {
     }
@@ -73,10 +74,27 @@ public final class Network {
             LAST_STATE.put(player.getUUID(), payload);
             RemnantMobs.platform().sendToPlayer(player, payload);
         }
+        syncDifficulty(player);
+    }
+
+    /** The difficulty meter (progression.json), sent only when it changed. */
+    private static void syncDifficulty(ServerPlayer player) {
+        DifficultyPayload payload = DifficultyPayload.HIDDEN;
+        var c = RemnantsConfig.progression();
+        if (c.enabled && c.meterSync) {
+            Threat t = Threat.at(player.serverLevel(), player.blockPosition(), true);
+            payload = new DifficultyPayload((int) Math.round(t.fraction() * 100), t.level(), t.moon() + t.event());
+        }
+        DifficultyPayload last = LAST_DIFFICULTY.get(player.getUUID());
+        if (!payload.equals(last) && (last != null || payload != DifficultyPayload.HIDDEN)) {
+            LAST_DIFFICULTY.put(player.getUUID(), payload);
+            RemnantMobs.platform().sendToPlayer(player, payload);
+        }
     }
 
     public static void forget(ServerPlayer player) {
         LAST_STATE.remove(player.getUUID());
+        LAST_DIFFICULTY.remove(player.getUUID());
     }
 
     public static void syncPlayers(MinecraftServer server) {
@@ -87,5 +105,6 @@ public final class Network {
 
     public static void clear() {
         LAST_STATE.clear();
+        LAST_DIFFICULTY.clear();
     }
 }

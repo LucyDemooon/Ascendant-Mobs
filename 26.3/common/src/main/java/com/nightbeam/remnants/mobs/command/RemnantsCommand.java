@@ -14,6 +14,9 @@ import com.nightbeam.remnants.mobs.compat.RasBridge;
 import com.nightbeam.remnants.mobs.config.RemnantsConfig;
 import com.nightbeam.remnants.mobs.content.Rank;
 import com.nightbeam.remnants.mobs.content.Trait;
+import com.nightbeam.remnants.mobs.config.EventsConfig;
+import com.nightbeam.remnants.mobs.difficulty.Difficulty;
+import com.nightbeam.remnants.mobs.event.EventNights;
 import com.nightbeam.remnants.mobs.event.HuntersMoon;
 import com.nightbeam.remnants.mobs.mob.MobData;
 import com.nightbeam.remnants.mobs.mob.MobLeveler;
@@ -21,6 +24,7 @@ import com.nightbeam.remnants.mobs.mob.RemnantMob;
 import com.nightbeam.remnants.mobs.mob.Threat;
 import com.nightbeam.remnants.mobs.mob.Titles;
 import com.nightbeam.remnants.mobs.network.Network;
+import com.nightbeam.remnants.mobs.progression.Hearts;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,6 +44,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -59,6 +64,10 @@ public final class RemnantsCommand {
             new DynamicCommandExceptionType(key -> Component.translatable("commands.remnant_mobs.unknown_rank", key));
     private static final DynamicCommandExceptionType UNKNOWN_TRAIT =
             new DynamicCommandExceptionType(key -> Component.translatable("commands.remnant_mobs.unknown_trait", key));
+    private static final DynamicCommandExceptionType UNKNOWN_EVENT =
+            new DynamicCommandExceptionType(id -> Component.translatableWithFallback("commands.remnant_mobs.event.unknown", "Unknown event: %s", id));
+    private static final SuggestionProvider<CommandSourceStack> EVENTS = (c, b) ->
+            SharedSuggestionProvider.suggest(RemnantsConfig.events().events.keySet(), b);
     private static final SuggestionProvider<CommandSourceStack> RANKS = (c, b) ->
             SharedSuggestionProvider.suggest(Arrays.stream(Rank.values()).map(Rank::key), b);
     private static final SuggestionProvider<CommandSourceStack> TRAITS = (c, b) -> {
@@ -118,6 +127,34 @@ public final class RemnantsCommand {
                             c.getSource().sendSuccess(() -> Component.translatable("commands.remnant_mobs.moon.stopped"), true);
                             return 1;
                         })))
+                .then(Commands.literal("difficulty")
+                        .executes(c -> difficulty(c, c.getSource().getPlayerOrException()))
+                        .then(Commands.argument("player", EntityArgument.player()).requires(op)
+                                .executes(c -> difficulty(c, EntityArgument.getPlayer(c, "player")))))
+                .then(Commands.literal("hearts")
+                        .executes(c -> hearts(c, c.getSource().getPlayerOrException()))
+                        .then(Commands.argument("player", EntityArgument.player()).requires(op)
+                                .executes(c -> hearts(c, EntityArgument.getPlayer(c, "player")))
+                                .then(Commands.literal("set").then(Commands.argument("hearts", IntegerArgumentType.integer(0, 100))
+                                        .executes(c -> {
+                                            ServerPlayer player = EntityArgument.getPlayer(c, "player");
+                                            Hearts.set(player, IntegerArgumentType.getInteger(c, "hearts"));
+                                            return hearts(c, player);
+                                        })))))
+                .then(Commands.literal("event")
+                        .executes(RemnantsCommand::eventStatus)
+                        .then(Commands.literal("list").executes(RemnantsCommand::eventList))
+                        .then(Commands.literal("start").requires(op)
+                                .then(Commands.argument("id", StringArgumentType.word()).suggests(EVENTS)
+                                        .executes(c -> eventStart(c, StringArgumentType.getString(c, "id")))))
+                        .then(Commands.literal("stop").requires(op).executes(c -> {
+                            boolean running = EventNights.active() != null;
+                            EventNights.stop(c.getSource().getServer(), false);
+                            c.getSource().sendSuccess(() -> running
+                                    ? Component.translatableWithFallback("commands.remnant_mobs.event.stopped", "The event night is over")
+                                    : Component.translatableWithFallback("commands.remnant_mobs.event.none", "No event night is running"), true);
+                            return running ? 1 : 0;
+                        })))
                 .then(Commands.literal("reload").requires(op).executes(RemnantsCommand::reload));
         dispatcher.register(root);
         dispatcher.register(Commands.literal("rml").redirect(dispatcher.getRoot().getChild("remnants")));
@@ -148,6 +185,110 @@ public final class RemnantsCommand {
         source.sendSuccess(() -> Component.translatable("commands.remnant_mobs.threat.range",
                 Math.max(t.min(), t.level() - spread), Math.min(t.max(), t.level() + spread)), false);
         return t.level();
+    }
+
+    /** The difficulty meter: where a player stands, as a share of their dimension's band, and why. */
+    private static int difficulty(CommandContext<CommandSourceStack> c, ServerPlayer player) {
+        CommandSourceStack source = c.getSource();
+        ServerLevel level = player.level();
+        Threat t = Threat.at(level, player.blockPosition(), true, true);
+        int percent = (int) Math.round(t.fraction() * 100);
+        ChatFormatting color = percent >= 75 ? ChatFormatting.DARK_RED : percent >= 50 ? ChatFormatting.RED
+                : percent >= 25 ? ChatFormatting.GOLD : ChatFormatting.GREEN;
+        source.sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.difficulty.header",
+                "Difficulty for %s: %s  (level %s of %s-%s, %s)", player.getDisplayName(),
+                Component.literal(percent + "%").withStyle(color), t.level(), t.min(), t.max(),
+                level.dimension().identifier().toString()).withStyle(ChatFormatting.GOLD), false);
+        if (t.engine()) {
+            source.sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.difficulty.parts",
+                    "  base %s + distance %s + days %s + depth %s + played %s + gear %s", t.min(), one(t.distance()), one(t.days()),
+                    one(t.depth()), one(t.played()), one(t.gear())).withStyle(ChatFormatting.GRAY), false);
+            if (t.multiplier() != 1.0 || t.offset() != 0) {
+                source.sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.difficulty.dimension",
+                        "  x %s %s this dimension", one(t.multiplier()), (t.offset() >= 0 ? "+ " : "- ") + one(Math.abs(t.offset())))
+                        .withStyle(ChatFormatting.GRAY), false);
+            }
+            double odds = Difficulty.rankMultiplier(RemnantsConfig.difficulty(), t.fraction()) * EventNights.rankMultiplier(level);
+            source.sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.difficulty.ranks",
+                    "  rank odds x%s", one(odds)).withStyle(ChatFormatting.GRAY), false);
+        } else {
+            source.sendSuccess(() -> Component.translatable("commands.remnant_mobs.threat.parts", t.min(),
+                    one(t.distance()), one(t.days()), one(t.depth()), t.moon()).withStyle(ChatFormatting.GRAY), false);
+            source.sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.difficulty.off",
+                    "  (the difficulty engine is off here: see difficulty.json)").withStyle(ChatFormatting.DARK_GRAY), false);
+        }
+        if (t.moon() > 0 || t.event() > 0) {
+            source.sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.difficulty.night",
+                    "  tonight: +%s levels", t.moon() + t.event()).withStyle(ChatFormatting.RED), false);
+        }
+        if (t.structureId() != null) {
+            source.sendSuccess(() -> Component.translatable("commands.remnant_mobs.threat.structure", t.structureId(), t.structure())
+                    .withStyle(ChatFormatting.GRAY), false);
+        }
+        if (t.players() > 0) {
+            source.sendSuccess(() -> Component.translatable("commands.remnant_mobs.threat.players", t.players(), one(t.playerLevel()),
+                    Math.round(t.weight() * 100)).withStyle(ChatFormatting.GRAY), false);
+        }
+        return percent;
+    }
+
+    private static int hearts(CommandContext<CommandSourceStack> c, ServerPlayer player) {
+        int hearts = Hearts.get(player);
+        int max = RemnantsConfig.progression().maxBonusHearts;
+        c.getSource().sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.hearts",
+                "%s has %s of %s extra hearts from Vital Embers", player.getDisplayName(), hearts, max), false);
+        return hearts;
+    }
+
+    private static int eventStatus(CommandContext<CommandSourceStack> c) {
+        var server = c.getSource().getServer();
+        String id = EventNights.active();
+        if (id != null) {
+            EventsConfig.Event event = EventNights.activeEvent();
+            long seconds = EventNights.remaining(server) / 20;
+            int waves = event != null ? event.hunters().waves() : 0;
+            c.getSource().sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.event.active",
+                    "%s is running: wave %s/%s, %s min %s s until dawn",
+                    eventName(id), EventNights.wavesSent(), waves, seconds / 60, seconds % 60).withStyle(ChatFormatting.RED), false);
+            return 1;
+        }
+        boolean enabled = RemnantsConfig.events().enabled;
+        c.getSource().sendSuccess(() -> enabled
+                ? Component.translatableWithFallback("commands.remnant_mobs.event.none", "No event night is running")
+                : Component.translatableWithFallback("commands.remnant_mobs.event.disabled", "Event nights are turned off in events.json"), false);
+        return 0;
+    }
+
+    private static int eventList(CommandContext<CommandSourceStack> c) {
+        var server = c.getSource().getServer();
+        long day = com.nightbeam.remnants.mobs.mob.WorldTime.dayIndex(server.overworld());
+        c.getSource().sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.event.list_moon",
+                " ◆ Hunter's Moon (levels.json): %s, %s%% on full moons",
+                RemnantsConfig.levels().moonEnabled ? "on" : "off", Math.round(RemnantsConfig.levels().moonChance * 100)), false);
+        for (EventsConfig.Event event : RemnantsConfig.events().events.values()) {
+            EventsConfig.Trigger t = event.trigger();
+            long next = EventNights.nextDay(t, day);
+            c.getSource().sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.event.list_entry",
+                    " ◆ %s (%s): %s, %s%% every %s nights from day %s; next chance on day %s",
+                    eventName(event.id()), event.id(), event.enabled() && RemnantsConfig.events().enabled ? "on" : "off",
+                    Math.round(t.chance() * 100), t.everyDays(), t.firstDay(), next), false);
+        }
+        return RemnantsConfig.events().events.size();
+    }
+
+    private static int eventStart(CommandContext<CommandSourceStack> c, String id) throws CommandSyntaxException {
+        EventsConfig.Event event = RemnantsConfig.events().events.get(id);
+        if (event == null) {
+            throw UNKNOWN_EVENT.create(id);
+        }
+        EventNights.start(c.getSource().getServer(), event, true);
+        c.getSource().sendSuccess(() -> Component.translatableWithFallback("commands.remnant_mobs.event.started",
+                "%s begins and lasts until dawn", eventName(id)), true);
+        return 1;
+    }
+
+    private static Component eventName(String id) {
+        return Component.translatableWithFallback("event.remnant_mobs." + id + ".title", EventNights.pretty(id));
     }
 
     private static String one(double value) {

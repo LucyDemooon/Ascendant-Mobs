@@ -1,8 +1,11 @@
 package com.nightbeam.remnants.mobs.content;
 
 import com.nightbeam.remnants.mobs.item.BrandOfChallengeItem;
+import com.nightbeam.remnants.mobs.item.HuntersDraughtItem;
 import com.nightbeam.remnants.mobs.item.HuntersLensItem;
+import com.nightbeam.remnants.mobs.item.MendingSalveItem;
 import com.nightbeam.remnants.mobs.item.RemnantShardItem;
+import com.nightbeam.remnants.mobs.item.VitalEmberItem;
 import com.nightbeam.remnants.mobs.platform.Registrar;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -17,6 +20,9 @@ public final class ModContent {
     public static Supplier<Item> REMNANT_SHARD;
     public static Supplier<Item> HUNTERS_LENS;
     public static Supplier<Item> BRAND_OF_CHALLENGE;
+    public static Supplier<Item> VITAL_EMBER;
+    public static Supplier<Item> MENDING_SALVE;
+    public static Supplier<Item> HUNTERS_DRAUGHT;
 
     public static Supplier<SoundEvent> SHARD_ABSORB;
     public static Supplier<SoundEvent> BRAND_APPLY;
@@ -38,6 +44,10 @@ public final class ModContent {
         HUNTERS_LENS = r.register(Registries.ITEM, "hunters_lens", id -> new HuntersLensItem(item(id).stacksTo(1).rarity(Rarity.UNCOMMON)));
         BRAND_OF_CHALLENGE = r.register(Registries.ITEM, "brand_of_challenge",
                 id -> new BrandOfChallengeItem(item(id).stacksTo(16).rarity(Rarity.RARE)));
+        VITAL_EMBER = r.register(Registries.ITEM, "vital_ember", id -> new VitalEmberItem(item(id).stacksTo(16).rarity(Rarity.RARE)));
+        MENDING_SALVE = r.register(Registries.ITEM, "mending_salve", id -> new MendingSalveItem(item(id).stacksTo(16)));
+        HUNTERS_DRAUGHT = r.register(Registries.ITEM, "hunters_draught",
+                id -> new HuntersDraughtItem(item(id).stacksTo(4).rarity(Rarity.UNCOMMON)));
 
         SHARD_ABSORB = sound(r, "item.shard.absorb");
         BRAND_APPLY = sound(r, "item.brand.apply");

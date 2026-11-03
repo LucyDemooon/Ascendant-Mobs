@@ -36,9 +36,9 @@ configs and leveled mobs carry over.
 | --- | --- | --- | --- |
 | `1.20.1/` | 1.20.1 | Fabric, Forge | 17 |
 | `1.21.1/` | 1.21.1 | Fabric, NeoForge | 21 |
-| `26.1.2/` | 26.1.2 | Fabric, NeoForge | 25 |
-| `26.2/` | 26.2 | Fabric, NeoForge | 25 |
-| `26.3/` | 26.3 | Fabric, NeoForge | 25 |
+| `26.1.2/` | 26.1.2 | Fabric, NeoForge, Forge | 25 |
+| `26.2/` | 26.2 | Fabric, NeoForge, Forge | 25 |
+| `26.3/` | 26.3 | Fabric, NeoForge, Forge | 25 |
 
 Fabric needs Fabric API. RPG Attribute System is optional. Install the mod on both the server and the client:
 the server does the leveling and the client draws the plates.

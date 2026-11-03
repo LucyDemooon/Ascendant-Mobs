@@ -1,0 +1,68 @@
+plugins {
+    id 'multiloader-loader'
+    id 'net.minecraftforge.gradle'
+}
+
+repositories {
+    minecraft.mavenizer(it)
+    maven fg.forgeMaven
+    maven fg.minecraftLibsMaven
+}
+
+// QA client (see tools/qa/): ForgeGradle picks a run's type from its name, so runQaClient runs the client
+// configuration with the arguments that join a server on localhost:25565 straight away.
+def qaClient = gradle.startParameter.taskNames.any { it.endsWith('runQaClient') }
+
+minecraft {
+    runs {
+        configureEach {
+            systemProperty 'forge.enabledGameTestNamespaces', mod_id
+            // Dev runs load classes from folders, without the jar manifest's MixinConfigs.
+            args '--mixin.config', "${mod_id}.mixins.json"
+        }
+        register('client') {
+            workingDir = layout.projectDirectory.dir('runs/client')
+            if (qaClient) {
+                args '--quickPlayMultiplayer', 'localhost:25565', '--username', 'RemnantHunter', '--width', '1920', '--height', '1080'
+            }
+        }
+        register('server') {
+            workingDir = layout.projectDirectory.dir('runs/server')
+            args '--nogui'
+        }
+    }
+}
+
+tasks.register('runQaClient') {
+    group = 'forgegradle runs'
+    description = 'Runs the client and joins a server on localhost:25565 (QA).'
+    dependsOn 'runClient'
+}
+
+dependencies {
+    implementation minecraft.dependency("net.minecraftforge:forge:${minecraft_version}-${forge_version}")
+}
+
+// Forge reads mixin configs from the jar manifest.
+jar {
+    manifest.attributes(['MixinConfigs': "${mod_id}.mixins.json"])
+}
+
+// Implement mcgradleconventions loader attribute
+def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
+['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
+    configurations.named(variant) {
+        attributes {
+            attribute(loaderAttribute, 'forge')
+        }
+    }
+}
+sourceSets.configureEach {
+    [it.compileClasspathConfigurationName, it.runtimeClasspathConfigurationName].each { variant ->
+        configurations.named(variant) {
+            attributes {
+                attribute(loaderAttribute, 'forge')
+            }
+        }
+    }
+}

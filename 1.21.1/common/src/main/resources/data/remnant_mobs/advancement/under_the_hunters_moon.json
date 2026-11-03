@@ -4,10 +4,12 @@
       "id": "minecraft:clock"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.under_the_hunters_moon.title"
+      "translate": "advancements.remnant_mobs.under_the_hunters_moon.title",
+      "fallback": "Under the Hunter's Moon"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.under_the_hunters_moon.description"
+      "translate": "advancements.remnant_mobs.under_the_hunters_moon.description",
+      "fallback": "Slay a ranked monster while a Hunter's Moon is up"
     },
     "frame": "goal",
     "show_toast": true,

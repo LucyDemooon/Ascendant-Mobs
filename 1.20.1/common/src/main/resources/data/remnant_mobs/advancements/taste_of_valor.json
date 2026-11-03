@@ -4,10 +4,12 @@
       "item": "remnant_mobs:remnant_shard"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.taste_of_valor.title"
+      "translate": "advancements.remnant_mobs.taste_of_valor.title",
+      "fallback": "Taste of Valor"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.taste_of_valor.description"
+      "translate": "advancements.remnant_mobs.taste_of_valor.description",
+      "fallback": "Absorb a Remnant Shard"
     },
     "frame": "task",
     "show_toast": true,

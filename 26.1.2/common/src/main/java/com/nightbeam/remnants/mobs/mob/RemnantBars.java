@@ -2,6 +2,7 @@ package com.nightbeam.remnants.mobs.mob;
 
 import com.nightbeam.remnants.mobs.config.RemnantsConfig;
 import com.nightbeam.remnants.mobs.content.Rank;
+import com.nightbeam.remnants.mobs.elite.EliteVisuals;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -14,7 +15,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Mob;
 
-/** Boss bars for Remnant-rank mobs, shown to players within 32 blocks who can see them. */
+/**
+ * Boss bars for Remnant-rank mobs (and Champions, with elites.json), shown to players within 32 blocks who can see them.
+ */
 public final class RemnantBars {
     private static final double RANGE = 32.0;
     private static final Map<Mob, ServerBossEvent> BARS = new IdentityHashMap<>();
@@ -23,21 +26,21 @@ public final class RemnantBars {
     }
 
     public static void tick(ServerLevel level, Mob mob) {
-        if (!RemnantsConfig.ranks().remnantBossBar) {
+        MobData data = RemnantMob.data(mob);
+        boolean shown = data != null && (data.rank() == Rank.REMNANT ? RemnantsConfig.ranks().remnantBossBar
+                : data.rank() == Rank.CHAMPION && EliteVisuals.championBar(mob));
+        if (!shown) {
             remove(mob);
             return;
         }
         ServerBossEvent bar = BARS.get(mob);
         if (bar == null) {
-            MobData data = RemnantMob.data(mob);
-            if (data == null) {
-                return;
-            }
+            int color = data.rank().color();
             Component name = Component.empty()
-                    .append(mob.getDisplayName().copy().withStyle(style -> style.withColor(Rank.REMNANT.color())))
+                    .append(mob.getDisplayName().copy().withStyle(style -> style.withColor(color)))
                     .append(Component.literal("  ·  ").withStyle(ChatFormatting.DARK_GRAY))
-                    .append(Component.translatable("plate.remnant_mobs.level", data.level()).withStyle(ChatFormatting.GOLD));
-            bar = new ServerBossEvent(mob.getUUID(), name, BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.NOTCHED_10);
+                    .append(Component.translatableWithFallback("plate.remnant_mobs.level", "Lv. %s", data.level()).withStyle(ChatFormatting.GOLD));
+            bar = new ServerBossEvent(mob.getUUID(), name, EliteVisuals.barColor(mob, data), BossEvent.BossBarOverlay.NOTCHED_10);
             bar.setDarkenScreen(false);
             BARS.put(mob, bar);
         }

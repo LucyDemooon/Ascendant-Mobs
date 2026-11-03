@@ -2,6 +2,21 @@
 
 Formerly RPG Mob Leveling System. Full notes for each major release are in [patchnotes/](patchnotes/).
 
+## 3.1.0
+
+**Supported platforms:** Minecraft 1.20.1 (Fabric, Forge) · 1.21.1 (Fabric, NeoForge) · 26.1.2, 26.2, 26.3 (Fabric, NeoForge, Forge)
+
+The difficulty engine. See [patchnotes/3.1.0.md](patchnotes/3.1.0.md).
+
+* **Difficulty** grows with days, play time, distance, depth and gear, per dimension, and drives levels and rank odds. `/remnants difficulty` and an on-screen gauge.
+* **Event nights**: the Grim Vigil sends waves of named, ranked hunters and a Remnant mini-boss. Add your own nights.
+* **Progression**: Vital Embers grow your hearts for good; Mending Salve and Hunter's Draught heal.
+* **Readable elites**: rank auras, Champion boss bars, glowing event hunters, visible without the mod too.
+* **Loot that scales** with difficulty, loot beams over rare drops, and Mob LootBags bags when installed.
+* **New: Forge on 26.1.2, 26.2 and 26.3.**
+* **Fixes**: Volatile keeps its drops; NeoForge servers no longer crash near players without the mod; 26.1.2 nameplates stay readable at an angle.
+* **Upgrading**: existing configs keep every new system off until you set `enabled: true`; fresh installs start with them on.
+
 ## 3.0.0: Blood and Valor
 
 **Supported platforms:** Minecraft 1.20.1 (Fabric, Forge) · 1.21.1, 26.1.2, 26.2, 26.3 (Fabric, NeoForge)

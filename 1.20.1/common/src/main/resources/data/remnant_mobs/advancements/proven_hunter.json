@@ -4,10 +4,12 @@
       "item": "minecraft:iron_sword"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.proven_hunter.title"
+      "translate": "advancements.remnant_mobs.proven_hunter.title",
+      "fallback": "Proven Hunter"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.proven_hunter.description"
+      "translate": "advancements.remnant_mobs.proven_hunter.description",
+      "fallback": "Slay an Elite monster"
     },
     "frame": "task",
     "show_toast": true,

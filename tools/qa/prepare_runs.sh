@@ -43,3 +43,9 @@ if [ ! -f "$CLIENT/config/remnant_mobs/client.json" ]; then
   echo '{"nameplates": {"hide_with_hud": false}}' > "$CLIENT/config/remnant_mobs/client.json"
 fi
 if [ -n "${3:-}" ] && [ -f "$3" ]; then cp "$3" "$CLIENT/options.txt"; fi
+# Without an options.txt to copy, write the keys that skip the first-run screens: the accessibility prompt otherwise
+# stops the QA client's --quickPlayMultiplayer join on a fresh run directory.
+if [ ! -f "$CLIENT/options.txt" ]; then
+  printf 'onboardAccessibility:false\nskipMultiplayerWarning:true\njoinedFirstServer:true\ntutorialStep:none\npauseOnLostFocus:false\n' \
+    > "$CLIENT/options.txt"
+fi

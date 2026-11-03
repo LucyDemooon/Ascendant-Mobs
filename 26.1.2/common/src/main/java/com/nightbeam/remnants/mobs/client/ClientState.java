@@ -4,6 +4,7 @@ import com.nightbeam.remnants.mobs.content.Rank;
 import com.nightbeam.remnants.mobs.mob.MobData;
 import com.nightbeam.remnants.mobs.mob.MobState;
 import com.nightbeam.remnants.mobs.mob.RemnantMob;
+import com.nightbeam.remnants.mobs.network.DifficultyPayload;
 import com.nightbeam.remnants.mobs.network.MobInfoPayload;
 import com.nightbeam.remnants.mobs.network.PlayerStatePayload;
 import java.util.HashMap;
@@ -16,6 +17,15 @@ import net.minecraft.world.entity.Mob;
 public final class ClientState {
     private static final Map<Integer, MobInfoPayload> PENDING = new HashMap<>();
     private static PlayerStatePayload player = new PlayerStatePayload(-1, false, false, -1, 0, 0, 0);
+    private static DifficultyPayload difficulty = DifficultyPayload.HIDDEN;
+
+    public static DifficultyPayload difficulty() {
+        return difficulty;
+    }
+
+    public static void handleDifficulty(DifficultyPayload payload) {
+        difficulty = payload;
+    }
 
     private ClientState() {
     }
@@ -66,6 +76,7 @@ public final class ClientState {
     public static void reset() {
         PENDING.clear();
         player = new PlayerStatePayload(-1, false, false, -1, 0, 0, 0);
+        difficulty = DifficultyPayload.HIDDEN;
     }
 
     /** Colour of a mob's level compared with the player's own, or neutral when levels are not compared. */

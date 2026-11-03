@@ -1,5 +1,6 @@
 package com.nightbeam.remnants.mobs.trait;
 
+import com.nightbeam.remnants.mobs.compat.VanillaFrost;
 import com.nightbeam.remnants.mobs.config.RemnantsConfig;
 import com.nightbeam.remnants.mobs.config.TraitsConfig;
 import com.nightbeam.remnants.mobs.content.ModContent;
@@ -9,6 +10,7 @@ import com.nightbeam.remnants.mobs.event.Scheduler;
 import com.nightbeam.remnants.mobs.mob.MobData;
 import com.nightbeam.remnants.mobs.mob.MobLeveler;
 import com.nightbeam.remnants.mobs.mob.MobState;
+import com.nightbeam.remnants.mobs.elite.EliteVisuals;
 import com.nightbeam.remnants.mobs.mob.RemnantBars;
 import com.nightbeam.remnants.mobs.mob.RemnantMob;
 import com.nightbeam.remnants.mobs.mob.Stats;
@@ -106,11 +108,18 @@ public final class TraitEffects {
             return;
         }
         if (data.has(Trait.FROSTBITE)) {
-            victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, ticks(value(Trait.FROSTBITE, "slowness_seconds")),
-                    Math.max(0, (int) value(Trait.FROSTBITE, "slowness_level") - 1)), mob);
-            if (victim.canFreeze()) {
-                int freeze = (int) value(Trait.FROSTBITE, "freeze_ticks");
-                victim.setTicksFrozen(Math.min(victim.getTicksRequiredToFreeze() + 60, victim.getTicksFrozen() + freeze));
+            int seconds = ticks(value(Trait.FROSTBITE, "slowness_seconds"));
+            int amplifier = Math.max(0, (int) value(Trait.FROSTBITE, "slowness_level") - 1);
+            var freezing = VanillaFrost.freezing();
+            if (freezing.isPresent()) {
+                // Minecraft 26.4 and later: the game's own Freezing effect instead of a parallel frost mechanic.
+                victim.addEffect(new MobEffectInstance(freezing.get(), seconds, amplifier), mob);
+            } else {
+                victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, seconds, amplifier), mob);
+                if (victim.canFreeze()) {
+                    int freeze = (int) value(Trait.FROSTBITE, "freeze_ticks");
+                    victim.setTicksFrozen(Math.min(victim.getTicksRequiredToFreeze() + 60, victim.getTicksFrozen() + freeze));
+                }
             }
             level.sendParticles(ParticleTypes.SNOWFLAKE, victim.getX(), victim.getY(0.5), victim.getZ(), 8, 0.3, 0.4, 0.3, 0.02);
         }
@@ -206,9 +215,10 @@ public final class TraitEffects {
 
     /** Every tick for leveled mobs with traits or a Remnant bar. */
     public static void tick(ServerLevel level, Mob mob, MobData data) {
-        if (data.rank() == Rank.REMNANT) {
+        if (data.rank() == Rank.REMNANT || (data.rank() == Rank.CHAMPION && EliteVisuals.championBar(mob))) {
             RemnantBars.tick(level, mob);
         }
+        EliteVisuals.tick(level, mob, data);
         if (data.traits().isEmpty() || !mob.isAlive()) {
             return;
         }
@@ -274,10 +284,27 @@ public final class TraitEffects {
                 level.sendParticles(ParticleTypes.SMOKE, x, y + 0.5, z, 4, 0.2, 0.2, 0.2, 0.01);
             }
             if (left == 0) {
-                level.explode(null, x, y, z, power, Level.ExplosionInteraction.NONE);
+                explodeSparingDrops(level, x, y, z, power);
             }
             return true;
         });
+    }
+
+    /**
+     * The Volatile blast hurts players and pushes items away, but must not destroy the loot the mob just dropped:
+     * explosions kill item entities, so the ones in reach are invulnerable for the instant of the blast.
+     */
+    private static void explodeSparingDrops(ServerLevel level, double x, double y, double z, float power) {
+        double reach = power * 2.0 + 1.0;
+        java.util.List<net.minecraft.world.entity.item.ItemEntity> items = level.getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(x - reach, y - reach, z - reach,
+                        x + reach, y + reach, z + reach), item -> !item.isPermanentlyInvulnerable());
+        items.forEach(item -> item.setPermanentlyInvulnerable(true));
+        try {
+            level.explode(null, x, y, z, power, Level.ExplosionInteraction.NONE);
+        } finally {
+            items.forEach(item -> item.setPermanentlyInvulnerable(false));
+        }
     }
 
     private static int ticks(double seconds) {

@@ -3,6 +3,7 @@ package com.nightbeam.remnants.mobs.forge;
 import com.nightbeam.remnants.mobs.RemnantMobs;
 import com.nightbeam.remnants.mobs.RemnantsEvents;
 import com.nightbeam.remnants.mobs.content.ModContent;
+import com.nightbeam.remnants.mobs.network.DifficultyPayload;
 import com.nightbeam.remnants.mobs.network.MobInfoPayload;
 import com.nightbeam.remnants.mobs.network.Payload;
 import com.nightbeam.remnants.mobs.network.PlayerStatePayload;
@@ -79,6 +80,11 @@ public final class RemnantMobsForge {
                 RemnantsEvents.onPlayerJoin(player);
             }
         });
+        MinecraftForge.EVENT_BUS.addListener((PlayerEvent.Clone event) -> {
+            if (event.getOriginal() instanceof ServerPlayer from && event.getEntity() instanceof ServerPlayer to) {
+                RemnantsEvents.onPlayerClone(from, to, !event.isWasDeath());
+            }
+        });
         MinecraftForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent event) -> {
             if (event.getEntity() instanceof ServerPlayer player) {
                 RemnantsEvents.onPlayerLeave(player);
@@ -99,10 +105,14 @@ public final class RemnantMobsForge {
     private void buildTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(ModContent.REMNANT_SHARD.get());
+            event.accept(ModContent.VITAL_EMBER.get());
         } else if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(ModContent.HUNTERS_LENS.get());
         } else if (event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(ModContent.BRAND_OF_CHALLENGE.get());
+        } else if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
+            event.accept(ModContent.MENDING_SALVE.get());
+            event.accept(ModContent.HUNTERS_DRAUGHT.get());
         }
     }
 
@@ -119,6 +129,12 @@ public final class RemnantMobsForge {
                 .decoder(PlayerStatePayload::read)
                 .consumerMainThread((payload, context) ->
                         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHandlers.playerState(payload)))
+                .add();
+        channel(DifficultyPayload.ID).messageBuilder(DifficultyPayload.class, 0, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(DifficultyPayload::write)
+                .decoder(DifficultyPayload::read)
+                .consumerMainThread((payload, context) ->
+                        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHandlers.difficulty(payload)))
                 .add();
     }
 

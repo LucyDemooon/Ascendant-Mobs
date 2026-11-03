@@ -4,10 +4,12 @@
       "id": "minecraft:diamond_sword"
     },
     "title": {
-      "translate": "advancements.remnant_mobs.champions_bane.title"
+      "translate": "advancements.remnant_mobs.champions_bane.title",
+      "fallback": "Champion's Bane"
     },
     "description": {
-      "translate": "advancements.remnant_mobs.champions_bane.description"
+      "translate": "advancements.remnant_mobs.champions_bane.description",
+      "fallback": "Slay a Champion"
     },
     "frame": "goal",
     "show_toast": true,

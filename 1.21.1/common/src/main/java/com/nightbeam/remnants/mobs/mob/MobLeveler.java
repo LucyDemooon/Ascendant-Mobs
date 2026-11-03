@@ -8,6 +8,8 @@ import com.nightbeam.remnants.mobs.content.ModContent;
 import com.nightbeam.remnants.mobs.content.ModTags;
 import com.nightbeam.remnants.mobs.content.Rank;
 import com.nightbeam.remnants.mobs.content.Trait;
+import com.nightbeam.remnants.mobs.difficulty.Difficulty;
+import com.nightbeam.remnants.mobs.event.EventNights;
 import com.nightbeam.remnants.mobs.event.HuntersMoon;
 import com.nightbeam.remnants.mobs.network.Network;
 import java.util.ArrayList;
@@ -115,7 +117,7 @@ public final class MobLeveler {
     public static MobData roll(ServerLevel level, Mob mob, Kind kind, boolean spawner) {
         RandomSource random = mob.getRandom();
         LevelsConfig c = RemnantsConfig.levels();
-        Threat threat = Threat.at(level, mob.blockPosition(), true);
+        Threat threat = Threat.at(level, mob.blockPosition(), true, !ModTags.is(mob.getType(), ModTags.IGNORES_DIFFICULTY));
         String id = EntityType.getKey(mob.getType()).toString();
         Integer lock = c.levelLocks.get(id);
         int mobLevel = lock != null ? Math.max(0, lock)
@@ -124,18 +126,27 @@ public final class MobLeveler {
         Rank rank = Rank.COMMON;
         Set<Trait> traits = EnumSet.noneOf(Trait.class);
         if (kind == Kind.HOSTILE && !ModTags.is(mob.getType(), ModTags.NEVER_RANKED)) {
-            rank = rollRank(random, mobLevel, spawner, moon);
+            double extra = EventNights.rankMultiplier(level);
+            if (threat.engine()) {
+                extra *= Difficulty.rankMultiplier(RemnantsConfig.difficulty(), threat.fraction());
+            }
+            rank = rollRank(random, mobLevel, spawner, moon, extra);
             traits = rollTraits(random, mob.getType(), rank, RemnantsConfig.ranks().stats(rank).traits());
         }
         return new MobData(mobLevel, rank, traits, random.nextLong(), flags(kind, spawner, moon));
     }
 
     public static Rank rollRank(RandomSource random, int level, boolean spawner, boolean moon) {
+        return rollRank(random, level, spawner, moon, 1.0);
+    }
+
+    /** @param extra further multiplier on every rank chance: difficulty and event nights */
+    public static Rank rollRank(RandomSource random, int level, boolean spawner, boolean moon, double extra) {
         RanksConfig ranks = RemnantsConfig.ranks();
         if (!ranks.enabled) {
             return Rank.COMMON;
         }
-        double multiplier = 1.0 + level / ranks.levelDivisor;
+        double multiplier = (1.0 + level / ranks.levelDivisor) * extra;
         if (spawner) {
             multiplier *= ranks.spawnerMultiplier;
         }
@@ -158,7 +169,7 @@ public final class MobLeveler {
 
     public static Set<Trait> addTraits(RandomSource random, EntityType<?> type, Rank rank, Set<Trait> existing, int count) {
         EnumSet<Trait> result = existing.isEmpty() ? EnumSet.noneOf(Trait.class) : EnumSet.copyOf(existing);
-        if (rank == Rank.COMMON) {
+        if (rank == Rank.COMMON || Difficulty.traitsSuppressed()) {
             return result;
         }
         TraitsConfig config = RemnantsConfig.traits();
@@ -202,6 +213,9 @@ public final class MobLeveler {
             if (RemnantsConfig.ranks().remnantTitles && !mob.hasCustomName()) {
                 mob.setCustomName(Component.literal(Titles.of(data.seed())));
             }
+        } else if (data.rank() == Rank.CHAMPION && RemnantsConfig.elites().enabled && RemnantsConfig.elites().championTitles
+                && !mob.hasCustomName()) {
+            mob.setCustomName(Component.literal(Titles.of(data.seed())));
         }
         Network.syncMob(mob);
     }

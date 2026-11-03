@@ -28,7 +28,7 @@ case "$1" in
     ;;
   stop-client|stop-server)
     # Only java processes are considered, so this never matches the calling shell.
-    want=$([ "$1" = stop-client ] && echo 'KnotClient|clientQaClient|runQaClient|--quickPlayMultiplayer' || echo 'KnotServer|runServer|forgeserver|serverData|neoforgeserver')
+    want=$([ "$1" = stop-client ] && echo 'KnotClient|clientQaClient|runQaClient|--quickPlayMultiplayer' || echo 'KnotServer|runServer|forgeserver|forge_userdev_server|serverData|neoforgeserver')
     for pid in $(pgrep -x java); do
       cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline")
       if echo "$cmd" | grep -qE "$want" && { [ -z "${2:-}" ] || echo "$cmd $(readlink "/proc/$pid/cwd")" | grep -q "/$2/"; }; then kill "$pid"; fi

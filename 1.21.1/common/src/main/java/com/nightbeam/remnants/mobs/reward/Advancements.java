@@ -15,6 +15,8 @@ public final class Advancements {
     public static final String KNOW_THY_ENEMY = "know_thy_enemy";
     public static final String ACCEPT_THE_CHALLENGE = "accept_the_challenge";
     public static final String NOTHING_LEFT_TO_HIDE = "nothing_left_to_hide";
+    public static final String SEE_THE_DAWN = "see_the_dawn";
+    public static final String KINDLED = "kindled";
 
     private Advancements() {
     }
