@@ -33,7 +33,7 @@ public abstract class EntityRendererMixin<T extends Entity> {
     @Inject(method = "render", at = @At("HEAD"))
     private void remnants$plate(T entity, float yaw, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, CallbackInfo ci) {
         remnants$plated = null;
-        if (!(entity instanceof Mob mob)) {
+        if (!(entity instanceof Mob mob) || Plates.drewFallback(entity)) {
             return;
         }
         Plate plate = Plate.build(mob, partialTick, entityRenderDispatcher.distanceToSqr(entity));
@@ -49,7 +49,7 @@ public abstract class EntityRendererMixin<T extends Entity> {
 
     @Inject(method = "renderNameTag", at = @At("HEAD"), cancellable = true)
     private void remnants$hideNameTag(T entity, Component name, PoseStack pose, MultiBufferSource buffers, int light, CallbackInfo ci) {
-        if (entity == remnants$plated) {
+        if (entity == remnants$plated || Plates.hidesNameTag(entity)) {
             ci.cancel();
         }
     }

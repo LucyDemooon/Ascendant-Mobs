@@ -2,6 +2,7 @@ package com.nightbeam.remnants.mobs.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.nightbeam.remnants.mobs.config.RemnantsConfig;
 import com.nightbeam.remnants.mobs.content.Trait;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -10,6 +11,8 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
 import javax.annotation.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -22,6 +25,40 @@ public final class Plates {
     private static final int WARD = 0xFFF2D46B;
 
     private Plates() {
+    }
+
+    /** The mob whose plate {@link #renderFallback} drew for the render in progress, if any. */
+    private static @Nullable Entity fallbackDrawn;
+
+    /**
+     * Draws a plate for a mob whose vanilla render another mod cancelled (Epic Fight replaces the renderer of the mobs it
+     * animates), so {@code EntityRenderer#render}, where plates are normally drawn, never runs for it. The loader calls
+     * this from the cancelled {@code RenderLivingEvent.Pre}, whose pose is the same one {@code EntityRenderer#render} gets.
+     */
+    public static void renderFallback(Mob mob, PoseStack pose, MultiBufferSource buffers, float partialTick) {
+        var dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        Plate plate = Plate.build(mob, partialTick, dispatcher.distanceToSqr(mob));
+        if (plate == null) {
+            fallbackDrawn = null;
+            return;
+        }
+        render(plate, pose, buffers, dispatcher.cameraOrientation(), false);
+        fallbackDrawn = mob;
+    }
+
+    /** A living render went through normally: the next {@code EntityRenderer#render} draws its own plate. */
+    public static void clearFallback() {
+        fallbackDrawn = null;
+    }
+
+    /** Whether {@link #renderFallback} already drew {@code entity}'s plate, so the renderer must not draw a second. */
+    public static boolean drewFallback(Entity entity) {
+        return entity == fallbackDrawn;
+    }
+
+    /** Whether the vanilla name tag of {@code entity} should give way to the fallback plate. */
+    public static boolean hidesNameTag(Entity entity) {
+        return entity == fallbackDrawn && RemnantsConfig.client().hideVanillaName;
     }
 
     public static void render(@Nullable Plate plate, PoseStack pose, MultiBufferSource buffers, Quaternionf camera, boolean nameTagShown) {

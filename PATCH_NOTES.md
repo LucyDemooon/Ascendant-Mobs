@@ -2,6 +2,10 @@
 
 Formerly RPG Mob Leveling System. Full notes for each major release are in [patchnotes/](patchnotes/).
 
+## 3.0.1
+
+* **Fixed:** health bars, levels and ranks now show on mobs animated by Epic Fight (Forge 1.20.1, NeoForge 1.21.1). See [patchnotes/3.0.1.md](patchnotes/3.0.1.md).
+
 ## 3.0.0: Blood and Valor
 
 **Supported platforms:** Minecraft 1.20.1 (Fabric, Forge) · 1.21.1, 26.1.2, 26.2, 26.3 (Fabric, NeoForge)
