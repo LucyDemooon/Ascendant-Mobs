@@ -2,6 +2,10 @@
 
 Formerly RPG Mob Leveling System. Full notes for each major release are in [patchnotes/](patchnotes/).
 
+## 3.1.2
+
+* **Ice and Fire dragons, sea serpents and hydras** are now leveled and ranked; new tag `#remnant_mobs:hostile` for any modded mob that should count as hostile. See [patchnotes/3.1.2.md](patchnotes/3.1.2.md).
+
 ## 3.1.1
 
 * **Fixed:** health bars, levels and ranks now show on mobs animated by Epic Fight (Forge 1.20.1, NeoForge 1.21.1). See [patchnotes/3.1.1.md](patchnotes/3.1.1.md).

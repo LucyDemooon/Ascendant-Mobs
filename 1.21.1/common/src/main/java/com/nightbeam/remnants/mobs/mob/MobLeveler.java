@@ -90,7 +90,7 @@ public final class MobLeveler {
         if (ModTags.is(type, ModTags.BOSSES)) {
             return Kind.BOSS;
         }
-        if (mob instanceof Enemy) {
+        if (mob instanceof Enemy || ModTags.is(type, ModTags.HOSTILE)) {
             return Kind.HOSTILE;
         }
         return c.affectPassive ? Kind.PASSIVE : Kind.NONE;

@@ -9,6 +9,8 @@ public final class ModTags {
     /** Get a level for show but no rank, traits or (unless boss_stats) stat changes. */
     public static final TagKey<EntityType<?>> BOSSES = TagKey.create(Registries.ENTITY_TYPE, RemnantMobs.id("bosses"));
     /** Never get a level. */
+    /** Mobs leveled and ranked as hostile although they are not vanilla {@code Enemy}s (Ice and Fire dragons...). */
+    public static final TagKey<EntityType<?>> HOSTILE = TagKey.create(Registries.ENTITY_TYPE, RemnantMobs.id("hostile"));
     public static final TagKey<EntityType<?>> NEVER_LEVELED = TagKey.create(Registries.ENTITY_TYPE, RemnantMobs.id("never_leveled"));
     /** Get a level but never a rank. */
     public static final TagKey<EntityType<?>> NEVER_RANKED = TagKey.create(Registries.ENTITY_TYPE, RemnantMobs.id("never_ranked"));
